@@ -10,9 +10,8 @@ This repository implements a Twilio Frontline integration service using Twilio S
 - 📓 Define message templates in Airtable
 - 🔐 Okta SSO setup script for easy SSO integration
 
-> :warning: **Not an official Twilio Project**: this software is not owned or maintained by Twilio. There is no Twilio support SLA for this integration.
 
-> :warning: **Scaling limits**: Airtable's API has a maximum throughput of 5 requests per second. This product is not suitable for large teams, see the Integration Limits section for more details. 
+> **Note**: Airtable's API has a maximum throughput of 5 requests per second. This product is not suitable for large teams, see the Integration Limits section for more details. 
 
 ## ▶️ [Video Setup Tutorial](https://www.youtube.com/watch?v=KDrhR1HyrlE)
 
