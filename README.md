@@ -1,9 +1,14 @@
-# Twilio Serverless Frontline Integration Service
+# Frontline Airtable Serverless Quickstart
 
 ![Twilio Frontline Integrations Service](https://user-images.githubusercontent.com/1418949/156482434-bda73f12-b1c1-4876-9177-0367751f6ff5.png)
 
 
-This repository implements a Twilio Frontline integration service using Twilio Serverless with Airtable as the contact databse.
+This repository implements a Twilio Frontline integration service using Twilio Serverless with Airtable as the contact database. It implements a few features:
+
+- 📇 Display a contact list in Frontline from a list of Airtable Contacts
+- 🔀 Route inbound conversations in Frontline based on Airtable record ownership
+- 📓 Define message templates in Airtable
+- 🔐 Okta SSO setup script for easy SSO integration
 
 > :warning: **Not an official Twilio Project**: this software is not owned or maintained by Twilio. There is no Twilio support SLA for this integration.
 
