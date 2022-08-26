@@ -88,7 +88,7 @@ In the Twilio Console, go to ***Frontline > Manage > Routing*** and add `[your_a
 <img width="1278" alt="Screen Shot 2022-02-28 at 11 43 02 PM" src="https://user-images.githubusercontent.com/1418949/156145008-bdffde5e-3c71-465e-b660-a9312f6167cc.png">
 
 
-### General callbacks
+### Frontline callbacks
 In the Twilio Console, go to ***Frontline > Manage > Callbacks*** and copy / paste the following callback URLs from your Frontline integration service:
 * CRM Callback URL: `[your_app_url]/callbacks/crm`
 * Outgoing Conversations Callback URL: `[your_app_url]/callbacks/outgoing-conversation`
@@ -97,9 +97,13 @@ In the Twilio Console, go to ***Frontline > Manage > Callbacks*** and copy / pas
 <img width="1535" alt="Screen Shot 2022-02-28 at 11 42 24 PM" src="https://user-images.githubusercontent.com/1418949/156145175-a458a1d8-62be-433f-870c-31151f5996a6.png">
 
 ### Conversations Setup Callbacks
-This callback receives the `onConversationAdded` and `onParticipantAdded` events from the Conversations service and sets the name of the conversation as well as the participant and participant avatar that is joining the conversation.
+In the Twilio Console, go to ***Conversations > Services > Defaults***
+* Find the service entry marked `Default Conversation Service` and click on the 'View Service' button.
+* From the service configuration page, click on the ***Webhooks** link
+* In the Webhook Url section, set BOTH the pre and post webhook URLs to `[your_app_url]/callbacks/twilio-conversations`
+* In the Webhook Filtering section, select the `onConversationAdded` and `onParticipantAdded` events.
 
-To set them up, go to ***Conversations > Services > Default Frontline Service > Webhooks***. Then select the `onConversationAdded` and `onParticipantAdded` events.
+This callback receives the `onConversationAdd` and `onParticipantAdded` events from the Conversations service and sets the name of the conversation as well as the participant and participant avatar that is joining the conversation.
 
 ## Data Format
 A sample Airtable template can be found [here](https://airtable.com/shrbXF88oQlRh7ZXh).
