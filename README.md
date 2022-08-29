@@ -63,7 +63,7 @@ AIRTABLE_BASE_ID= # Your Airtable Base ID
 ## Deploy
 Deploy this Serverless app with one command:
 ```bash
-twilio serverless:deploy
+twilio serverless:deploy --service-name=frontline-airtable-quickstart-service
 ```
 > :information_source: **Always deploy to the same Twilio Account as your Frontline Service**: This integration service uses Twilio-signed requests to protect the callback URLs. The callback URLs will reject requests from a different Twilio account with a 403 error. You can check which account you're deploying to with `twilio profiles:list` and add another account with `twilio profiles:add`. 
 
