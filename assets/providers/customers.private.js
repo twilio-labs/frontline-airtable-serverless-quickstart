@@ -1,11 +1,11 @@
 // Create global variable to memoize customer data
 // so that we do not ping airtable for all customers every page load
+const Airtable = require('airtable')
 
 let lastFetch = ''
 let customers = []
 
 const initAirtable = (context) => {
-  const Airtable = require('airtable')
   return new Airtable({ apiKey: context.AIRTABLE_API_KEY }).base(context.AIRTABLE_BASE_ID)
 }
 
@@ -210,10 +210,25 @@ const getCustomerById = async (context, customerId) => {
   return customer
 }
 
+const updateCustomer = async (context, id, fields) => {
+  console.log(`updating airtable contact ${id} with fields ${JSON.stringify(fields)}`)
+  const base = initAirtable(context)
+  return new Promise((resolve, reject) => {
+    base('Customers').update(id, fields, function done (err, record) {
+      if (err) {
+        console.error('update error: ' + err)
+        reject(err)
+      }
+      resolve(record)
+    })
+  })
+}
+
 module.exports = {
   findWorkerForCustomer,
   findRandomWorker,
   getCustomerById,
   getCustomersList,
-  getCustomerByNumber
+  getCustomerByNumber,
+  updateCustomer
 }

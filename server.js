@@ -1,7 +1,7 @@
 require('dotenv').config()
 const express = require('express')
 const { v1: uuidv1 } = require('uuid')
-// const { updateCustomer } = require('./assets/providers/customers.private')
+const { updateCustomer } = require('./assets/providers/customers.private')
 const _ = (varName, defaults) => process.env[varName] || defaults || null
 const port = _('PORT', 5001)
 
@@ -36,7 +36,16 @@ const createApp = (config) => {
 }
 
 const airtTableUpdateHandler = async (req, res) => {
-  res.status(200).send({ api_key: config.airtable.api_key })
+  try {
+    const context = { AIRTABLE_API_KEY: config.airtable.api_key, AIRTABLE_BASE_ID: config.airtable.base_id }
+    await updateCustomer(context, 1, {
+      opt_out: 'some opt out info' // { [_('TWILIO_SMS_NUMBER')]: true }
+    })
+    res.status(200).send({ api_key: config.airtable.api_key })
+  } catch (err) {
+    console.log('airtTableUpdateHandler error:' + err)
+    res.status(500).send({ error: err })
+  }
 }
 
 const app = createApp(config)

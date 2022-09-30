@@ -1,3 +1,4 @@
+const { updateCustomer } = require('../../assets/providers/customers.private')
 
 // eslint-disable-next-line no-undef
 const customersPath = Runtime.getAssets()['/providers/customers.js'].path
@@ -8,22 +9,33 @@ exports.handler = async function (context, event, callback) {
 
   // Location helps to determine which information was requested.
   // CRM callback is a general purpose tool and might be used to fetch different kind of information
-  switch (location) {
-    case 'GetCustomerDetailsByCustomerId': {
-      const resp = await handleGetCustomerDetailsByCustomerIdCallback(event, context)
-      callback(null, resp)
-      break
-    }
-    case 'GetCustomersList': {
-      const resp = await handleGetCustomersListCallback(context, event)
-      callback(null, resp)
-      break
-    }
+  try {
+    switch (location) {
+      case 'GetCustomerDetailsByCustomerId': {
+        const resp = await handleGetCustomerDetailsByCustomerIdCallback(event, context)
+        callback(null, resp)
+        break
+      }
+      case 'GetCustomersList': {
+        const resp = await handleGetCustomersListCallback(context, event)
+        callback(null, resp)
+        break
+      }
 
-    default: {
-      console.log('Unknown location: ', location)
-      callback(new Error(`422 Unknown location: ${location}`))
+      case 'UpdateCustomer': {
+        console.log('UpdateCustomer called')
+        const resp = await updateCustomer(context, 'recRejsM52yEujfLj', { email: 'YES' })
+        callback(null, resp)
+        break
+      }
+      default: {
+        console.log('Unknown location: ', location)
+        callback(new Error(`422 Unknown location: ${location}`))
+      }
     }
+  } catch (err) {
+    console.log('Error in crm handler')
+    callback(new Error(err))
   }
 }
 
