@@ -12,6 +12,10 @@ const getPhoneNumber = (address) => {
   )
 }
 
+const isUserMessageEvent = (event) => {
+  return !!event.ClientIdentity
+}
+
 module.exports = {
-  getParticipant, getPhoneNumber
+  getParticipant, getPhoneNumber, isUserMessageEvent
 }

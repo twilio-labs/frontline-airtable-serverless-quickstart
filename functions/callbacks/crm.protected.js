@@ -1,4 +1,5 @@
-const { updateCustomer } = require('../../assets/providers/customers.private')
+/* eslint-disable no-undef */
+const { updateCustomer } = Runtime.getAssets()['/providers/customers.js'].path
 
 // eslint-disable-next-line no-undef
 const customersPath = Runtime.getAssets()['/providers/customers.js'].path
@@ -24,7 +25,7 @@ exports.handler = async function (context, event, callback) {
 
       case 'UpdateCustomer': {
         console.log('UpdateCustomer called')
-        const resp = await updateCustomer(context, 'recRejsM52yEujfLj', { email: 'YES' })
+        const resp = await updateCustomer(context, 'recRejsM52yEujfLj', { opt_out: 'TRUE' })
         callback(null, resp)
         break
       }

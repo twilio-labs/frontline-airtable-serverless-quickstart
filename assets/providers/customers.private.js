@@ -14,14 +14,14 @@ const setLastFetch = () => {
   lastFetch = date.toISOString()
 }
 
-const getAirtableCustomerByParams = async (context, params) => {
+const getAirtableCustomerByParams = async (context, params, returnRawRecord) => {
   const base = initAirtable(context)
 
   return new Promise((resolve, reject) => {
     let customer
 
     base('Customers').select(params).eachPage(function page (records, fetchNextPage) {
-      customer = formatCustomerRecord(records[0])
+      customer = returnRawRecord ? records[0] : formatCustomerRecord(records[0])
       fetchNextPage()
     }, function done (err) {
       if (err) {
@@ -99,7 +99,7 @@ const formatCustomerRecord = (customerRecord) => {
   try {
     const unformattedAddress = customerRecord.get('sms')
     const formattedAddress = unformattedAddress.replace(/[-()]/gm, '')
-
+    console.log(`formatCustomRecord for ${JSON.stringify(customerRecord)}`)
     return {
       customer_id: `${customerRecord.get('id')}`,
       display_name: `${customerRecord.get('name')}`,
@@ -192,12 +192,12 @@ const getCustomersList = async (context, worker, pageSize, anchor) => {
   }
 }
 
-const getCustomerByNumber = async (context, customerNumber) => {
+const getCustomerByNumber = async (context, customerNumber, returnRawRecord = false) => {
   const customer = await getAirtableCustomerByParams(context, {
     view: 'Grid view',
     filterByFormula: `{sms} = '${customerNumber}'`,
     maxRecords: 1
-  })
+  }, returnRawRecord)
   return customer
 }
 
@@ -211,12 +211,11 @@ const getCustomerById = async (context, customerId) => {
 }
 
 const updateCustomer = async (context, id, fields) => {
-  console.log(`updating airtable contact ${id} with fields ${JSON.stringify(fields)}`)
   const base = initAirtable(context)
   return new Promise((resolve, reject) => {
     base('Customers').update(id, fields, function done (err, record) {
       if (err) {
-        console.error('update error: ' + err)
+        console.error('update error: ' + JSON.stringify(err))
         reject(err)
       }
       resolve(record)

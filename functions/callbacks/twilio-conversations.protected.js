@@ -1,6 +1,7 @@
 /* eslint-disable no-undef */
 const { getCustomerByNumber, updateCustomer } = require(Runtime.getAssets()['/providers/customers.js'].path)
-const { getParticipant, getPhoneNumber } = require(Runtime.getAssets()['/providers/conversation.js'].path)
+const { getParticipant, isUserMessageEvent } = require(Runtime.getAssets()['/providers/conversation.js'].path)
+const { getOptOutChangeRequest } = require(Runtime.getAssets()['/providers/optout.js'].path)
 
 exports.handler = async function (context, event, callback) {
   const eventType = event.EventType
@@ -48,17 +49,11 @@ exports.handler = async function (context, event, callback) {
       break
     }
     case 'onMessageAdded': {
-      if (isOptOutMessage(event.Body)) {
-        // get number to block
-        const customerParticipant = await getParticipant(context, event.ConversationSid, event.ParticipantSid)
-        const twilioPhoneNumber = getPhoneNumber(customerParticipant.messagingBinding.proxy_address)
-
-        // update customer opt out state
-        const customerNumber = event.Author
-        const customer = await getCustomerByNumber(customerNumber)
-        await updateCustomer(customer.customer_id, {
-          opt_out: { [twilioPhoneNumber]: true }
-        })
+      if (!isUserMessageEvent(event)) {
+        const optOutStatusUpdate = getOptOutChangeRequest(event.Body)
+        if (optOutStatusUpdate) {
+          await updateCustomerOptOutStatus(context, event, optOutStatusUpdate)
+        }
       }
       callback(null, 'success')
       break
@@ -101,10 +96,6 @@ exports.handler = async function (context, event, callback) {
     }
   }
 }
-const isOptOutMessage = (messageBody) => {
-  const optOutKeywords = ['STAHP', 'IQUIT']
-  return messageBody && optOutKeywords.includes(messageBody.toUpperCase())
-}
 
 const setCustomerParticipantProperties = async (customerParticipant, customerDetails) => {
   const participantAttributes = JSON.parse(customerParticipant.attributes)
@@ -124,4 +115,16 @@ const setCustomerParticipantProperties = async (customerParticipant, customerDet
       .update(customerProperties)
       .catch(e => console.log('Update customer participant failed: ', e))
   }
+}
+
+const updateCustomerOptOutStatus = async (context, event, optOutStatus) => {
+  console.log(`received opt out change request from ${event.Author}`)
+
+  // // get Twilio number to (un)block
+  // const customerParticipant = await getParticipant(context, event.ConversationSid, event.ParticipantSid)
+  // const twilioPhoneNumber = getPhoneNumber(customerParticipant.messagingBinding.proxy_address)
+
+  // update customer opt out state
+  const customer = await getCustomerByNumber(context, event.Author, true)
+  await updateCustomer(context, customer.id, { opt_out: optOutStatus })
 }
