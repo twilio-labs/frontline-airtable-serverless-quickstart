@@ -16,10 +16,8 @@ const setLastFetch = () => {
 
 const getAirtableCustomerByParams = async (context, params, returnRawRecord) => {
   const base = initAirtable(context)
-
   return new Promise((resolve, reject) => {
     let customer
-
     base('Customers').select(params).eachPage(function page (records, fetchNextPage) {
       customer = returnRawRecord ? records[0] : formatCustomerRecord(records[0])
       fetchNextPage()
@@ -27,7 +25,6 @@ const getAirtableCustomerByParams = async (context, params, returnRawRecord) => 
       if (err) {
         reject(JSON.stringify(err))
       }
-
       resolve(customer)
     })
   })
@@ -99,7 +96,7 @@ const formatCustomerRecord = (customerRecord) => {
   try {
     const unformattedAddress = customerRecord.get('sms')
     const formattedAddress = unformattedAddress.replace(/[-()]/gm, '')
-    console.log(`formatCustomRecord for ${JSON.stringify(customerRecord)}`)
+
     return {
       customer_id: `${customerRecord.get('id')}`,
       display_name: `${customerRecord.get('name')}`,
