@@ -96,6 +96,17 @@ const formatCustomerRecord = (customerRecord) => {
   try {
     const unformattedAddress = customerRecord.get('sms')
     const formattedAddress = unformattedAddress.replace(/[-()]/gm, '')
+    let optOutStatus
+    switch (customerRecord.get('opt_out')) {
+      case 'true':
+        optOutStatus = 'OPTED OUT'
+        break
+      case 'false':
+        optOutStatus = 'SUBSCRIBED'
+        break
+      default:
+        optOutStatus = 'NOT SET'
+    }
 
     return {
       customer_id: `${customerRecord.get('id')}`,
@@ -110,7 +121,7 @@ const formatCustomerRecord = (customerRecord) => {
       ],
       details: {
         title: 'Information',
-        content: `${customerRecord.get('notes')}`
+        content: `Notes: ${customerRecord.get('notes')}\nOpt Out Status: ${optOutStatus}`
       },
       worker: `${customerRecord.get('owner')}`,
       address: `${formattedAddress}`
