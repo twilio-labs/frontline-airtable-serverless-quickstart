@@ -193,9 +193,11 @@ const getCustomersList = async (context, worker, pageSize, anchor) => {
 }
 
 const getCustomerByNumber = async (context, customerNumber) => {
+  const normalizedNumber = await normalizeNumber(context, customerNumber)
+  console.log(`normalizedNumber: ${normalizedNumber}`)
   const customer = await getAirtableCustomerByParams(context, {
     view: 'Grid view',
-    filterByFormula: `{sms} = '${customerNumber}'`,
+    filterByFormula: `{sms} = '${normalizedNumber}'`,
     maxRecords: 1
   })
   return customer
@@ -208,6 +210,34 @@ const getCustomerById = async (context, customerId) => {
     maxRecords: 1
   })
   return customer
+}
+
+/* Sync version of 'normalizeNumber' that uses google-libphonenumber for number parsing
+   and a custom map of legacy/current country code pairs for number normalization.
+
+   To use this version, run 'npm install google-libphonenumber' and then uncomment the following
+   lines.  You will need to call it w/o the 'await' keyword since it is not an aync function
+
+    const phoneUtil = require('google-libphonenumber').phoneUtil
+    const PNF = require('google-libphonenumber').PhoneNumberFormat
+    const normalizeNumberSync = (context, inNumber) => {
+      const countryCodeMap = new Map([['1', '2']])
+
+      const outPhone = phoneUtil.parse(inNumber)
+      const countryCode = outPhone.getCountryCode()
+
+      if (countryCodeMap.has(countryCode)) {
+        const normalizedCountryCode = countryCodeMap.get(countryCode)
+        outPhone.setCountryCode(normalizedCountryCode)
+      }
+
+      return phoneUtil.format(outPhone, PNF.E164)
+    }
+*/
+
+const normalizeNumber = async (context, inNumber) => {
+  const client = context.getTwilioClient()
+  return await client.lookups.v2.phoneNumbers(inNumber).fetch().phoneNumber
 }
 
 module.exports = {
