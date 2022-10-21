@@ -19,7 +19,7 @@ const getAirtableCustomerByParams = async (context, params, returnRawRecord) => 
   return new Promise((resolve, reject) => {
     let customer
     base('Customers').select(params).eachPage(function page (records, fetchNextPage) {
-      customer = returnRawRecord ? records[0] : formatCustomerRecord(records[0])
+      customer = returnRawRecord ? records[0] : toCustomerDto(records[0])
       fetchNextPage()
     }, function done (err) {
       if (err) {
@@ -52,7 +52,7 @@ const getAllAirtableCustomers = async (context, workerId) => {
       // This function (`page`) will get called for each page of records.
 
       records.forEach(function (record) {
-        const formattedRecord = formatCustomerRecord(record)
+        const formattedRecord = toCustomerDto(record)
         formattedCustomers.push(formattedRecord)
       })
 
@@ -80,7 +80,7 @@ const getNewCustomers = (context, worker) => {
       // This function (`page`) will get called for each page of records.
 
       records.forEach(function (record) {
-        const formattedRecord = formatCustomerRecord(record)
+        const formattedRecord = toCustomerDto(record)
         newCustomers.push(formattedRecord)
       })
 
@@ -92,7 +92,7 @@ const getNewCustomers = (context, worker) => {
   })
 }
 
-const formatCustomerRecord = (customerRecord) => {
+const toCustomerDto = (customerRecord) => {
   try {
     const unformattedAddress = customerRecord.get('sms')
     const formattedAddress = unformattedAddress.replace(/[-()]/gm, '')
@@ -128,6 +128,18 @@ const formatCustomerRecord = (customerRecord) => {
     }
   } catch (err) {
     return new Error(err)
+  }
+}
+
+const toCustomerFields = (customerDto) => {
+  const smsChannel = customerDto.channels && customerDto.channels.find(c => c.type === 'sms')
+  const waChannel = customerDto.channels && customerDto.channels.find(c => c.type === 'whatsapp')
+
+  return {
+    name: customerDto.display_name,
+    sms: smsChannel ? smsChannel.value : null,
+    whatsapp: waChannel ? waChannel.value : null,
+    owner: customerDto.worker
   }
 }
 
@@ -218,12 +230,27 @@ const getCustomerById = async (context, customerId) => {
   return customer
 }
 
+const createCustomer = async (context, customerDto) => {
+  const fields = toCustomerFields(customerDto)
+  const base = initAirtable(context)
+  return new Promise((resolve, reject) => {
+    base('Customers').create(fields, function done (err, record) {
+      if (err) {
+        console.error('createCustomer error: ' + JSON.stringify(err))
+        reject(err)
+      }
+      const newCustomerDto = toCustomerDto(record)
+      resolve(newCustomerDto)
+    })
+  })
+}
+
 const updateCustomer = async (context, id, fields) => {
   const base = initAirtable(context)
   return new Promise((resolve, reject) => {
     base('Customers').update(id, fields, function done (err, record) {
       if (err) {
-        console.error('update error: ' + JSON.stringify(err))
+        console.error('updateCustomer error: ' + JSON.stringify(err))
         reject(err)
       }
       resolve(record)
@@ -232,6 +259,7 @@ const updateCustomer = async (context, id, fields) => {
 }
 
 module.exports = {
+  createCustomer,
   findWorkerForCustomer,
   findRandomWorker,
   getCustomerById,

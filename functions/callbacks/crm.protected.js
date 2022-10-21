@@ -1,48 +1,60 @@
-/* eslint-disable no-undef */
-const { updateCustomer } = Runtime.getAssets()['/providers/customers.js'].path
-
 // eslint-disable-next-line no-undef
 const customersPath = Runtime.getAssets()['/providers/customers.js'].path
-const { getCustomerById, getCustomersList } = require(customersPath)
+const { createCustomer, getCustomerById, getCustomersList } = require(customersPath)
 
 exports.handler = async function (context, event, callback) {
   const location = event.Location
+  let response
 
   // Location helps to determine which information was requested.
   // CRM callback is a general purpose tool and might be used to fetch different kind of information
   try {
     switch (location) {
+      case 'CreateCustomer': {
+        response = await handleCreateCustomer(context, event)
+        break
+      }
       case 'GetCustomerDetailsByCustomerId': {
-        const resp = await handleGetCustomerDetailsByCustomerIdCallback(event, context)
-        callback(null, resp)
+        response = await handleGetCustomerDetailsByCustomerIdCallback(context, event)
         break
       }
       case 'GetCustomersList': {
-        const resp = await handleGetCustomersListCallback(context, event)
-        callback(null, resp)
-        break
-      }
-
-      case 'UpdateCustomer': {
-        console.log('UpdateCustomer called')
-        const resp = await updateCustomer(context, 'recRejsM52yEujfLj', { opt_out: 'TRUE' })
-        callback(null, resp)
+        response = await handleGetCustomersListCallback(context, event)
         break
       }
       default: {
-        console.log('Unknown location: ', location)
-        callback(new Error(`422 Unknown location: ${location}`))
+        console.log('crm.handler - Unknown location: ', location)
+        throw new Error(`422 Unknown location: ${location}`)
       }
     }
+    callback(null, response)
   } catch (err) {
-    console.log('Error in crm handler')
+    console.log(`crm.handler error: ${err}`)
     callback(new Error(err))
   }
 }
 
-const handleGetCustomerDetailsByCustomerIdCallback = async (event, context) => {
-  console.log(`Getting customer details for customer ID ${event.CustomerId}`)
+const handleCreateCustomer = async (context, event) => {
+  const customerRequest = event.Customer
+  customerRequest.worker = event.Worker
+  const newCustomer = await createCustomer(context, customerRequest)
 
+  // Respond with Contact object
+  return {
+    objects: {
+      customer: {
+        customer_id: newCustomer.customer_id,
+        display_name: newCustomer.display_name,
+        channels: newCustomer.channels,
+        links: newCustomer.links,
+        avatar: newCustomer.avatar,
+        details: newCustomer.details
+      }
+    }
+  }
+}
+
+const handleGetCustomerDetailsByCustomerIdCallback = async (context, event) => {
   const customerId = event.CustomerId
 
   // Fetch Customer Details based on his ID
