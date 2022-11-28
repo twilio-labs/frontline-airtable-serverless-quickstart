@@ -3,6 +3,7 @@ const customersPath = Runtime.getAssets()['/providers/customers.js'].path
 const { createCustomer, getCustomerById, getCustomersList } = require(customersPath)
 
 exports.handler = async function (context, event, callback) {
+  console.log(`crm.handler event: ${JSON.stringify(event)}`)
   const location = event.Location
   let response
 
@@ -35,11 +36,15 @@ exports.handler = async function (context, event, callback) {
 }
 
 const handleCreateCustomer = async (context, event) => {
-  const customerRequest = event.Customer
-  customerRequest.worker = event.Worker
+  const customerRequest = {
+    display_name: event.DisplayName,
+    channels: JSON.parse(event.Channels),
+    worker: event.Worker
+  }
+
   const newCustomer = await createCustomer(context, customerRequest)
 
-  // Respond with Contact object
+  // Respond with (new) Customner object
   return {
     objects: {
       customer: {
@@ -92,4 +97,22 @@ const handleGetCustomersListCallback = async (context, event) => {
       customers: customersList
     }
   }
+}
+
+const parseChannelsFromEvent = (event) => {
+  const channels = []
+  const regex = /\[(.*?)\]/gm
+  for (const [key, value] of Object.entries(event)) {
+    if (!key.startsWith('Channels')) continue
+
+    const matches = [...key.matchAll(regex)]
+    const channelIndex = matches[0][1]
+    const channelPropName = matches[1][1]
+    if (channels[channelIndex] === undefined) {
+      channels[channelIndex] = {}
+    }
+    channels[channelIndex][channelPropName] = value
+  }
+
+  return channels
 }

@@ -36,6 +36,7 @@ const createApp = (config) => {
 }
 
 const airtTableUpdateHandler = async (req, res) => {
+  console.log(`airtTableUpdateHandler.req.body: ${req.body}`)
   try {
     const context = { AIRTABLE_API_KEY: config.airtable.api_key, AIRTABLE_BASE_ID: config.airtable.base_id }
     await updateCustomer(context, 1, {

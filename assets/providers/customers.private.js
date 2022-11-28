@@ -94,8 +94,6 @@ const getNewCustomers = (context, worker) => {
 
 const toCustomerDto = (customerRecord) => {
   try {
-    const unformattedAddress = customerRecord.get('sms')
-    const formattedAddress = unformattedAddress.replace(/[-()]/gm, '')
     let optOutStatus
     switch (customerRecord.get('opt_out')) {
       case 'true':
@@ -108,7 +106,7 @@ const toCustomerDto = (customerRecord) => {
         optOutStatus = 'NOT SET'
     }
 
-    return {
+    const customerDto = {
       customer_id: `${customerRecord.get('id')}`,
       display_name: `${customerRecord.get('name')}`,
       channels: [
@@ -124,8 +122,10 @@ const toCustomerDto = (customerRecord) => {
         content: `Notes: ${customerRecord.get('notes')}\nOpt Out Status: ${optOutStatus}`
       },
       worker: `${customerRecord.get('owner')}`,
-      address: `${formattedAddress}`
+      address: `${(customerRecord.get('sms') ?? 'none').replace(/[-()]/gm, '')}`
     }
+
+    return customerDto
   } catch (err) {
     return new Error(err)
   }
@@ -239,6 +239,7 @@ const createCustomer = async (context, customerDto) => {
         console.error('createCustomer error: ' + JSON.stringify(err))
         reject(err)
       }
+
       const newCustomerDto = toCustomerDto(record)
       resolve(newCustomerDto)
     })
