@@ -2,94 +2,86 @@
 // so that we do not ping airtable for all customers every page load
 const Airtable = require('airtable')
 
-let lastFetch = ''
-let customers = []
-
 const initAirtable = (context) => {
   return new Airtable({ apiKey: context.AIRTABLE_API_KEY }).base(context.AIRTABLE_BASE_ID)
 }
 
-const setLastFetch = () => {
-  const date = new Date()
-  lastFetch = date.toISOString()
-}
+const getCustomers = async (context, selectOptions, returnRawRecord) => {
+  selectOptions = selectOptions ?? {
+    view: 'Grid view',
+    pageSize: 100
+  }
 
-const getAirtableCustomerByParams = async (context, params, returnRawRecord) => {
-  const base = initAirtable(context)
   return new Promise((resolve, reject) => {
-    let customer
-    base('Customers').select(params).eachPage(function page (records, fetchNextPage) {
-      customer = returnRawRecord ? records[0] : toCustomerDto(records[0])
+    const customers = []
+    const base = initAirtable(context)
+    base('Customers').select(selectOptions).eachPage(function page (records, fetchNextPage) {
+      // This function (`page`) will get called for each page of records
+      records.forEach(function (record) {
+        const customer = returnRawRecord ? record : toCustomerDto(record)
+        customers.push(customer)
+      })
       fetchNextPage()
     }, function done (err) {
       if (err) {
         reject(JSON.stringify(err))
       }
-      resolve(customer)
+      resolve(customers)
     })
   })
 }
 
-// Retrieve customers from Airtable
-const getAllAirtableCustomers = async (context, workerId) => {
-  const base = initAirtable(context)
-
-  const querySettings = {
+const getCustomer = async (context, filter, returnRawRecord = false) => {
+  const customerQuery = {
     view: 'Grid view',
-    pageSize: 100
+    filterByFormula: `{${filter.key}} = '${filter.value}'`,
+    maxRecords: 1
   }
 
-  // Filter airtable results by owner if we know
-  // the worker ID
-  if (workerId) {
-    querySettings.filterByFormula = `{owner} = '${workerId}'`
-  }
+  const customer = (await getCustomers(context, customerQuery, returnRawRecord))[0]
 
-  return new Promise((resolve, reject) => {
-    const formattedCustomers = []
-
-    base('Customers').select(querySettings).eachPage(function page (records, fetchNextPage) {
-      // This function (`page`) will get called for each page of records.
-
-      records.forEach(function (record) {
-        const formattedRecord = toCustomerDto(record)
-        formattedCustomers.push(formattedRecord)
-      })
-
-      fetchNextPage()
-    }, function done (err) {
-      if (err) { reject(err) }
-      resolve(formattedCustomers)
-    })
-  })
+  return customer
 }
 
-const getNewCustomers = (context, worker) => {
-  const base = initAirtable(context)
-
-  const querySettings = {
+const getCustomersByWorker = async (context, worker, pageSize, anchor) => {
+  const workerQuery = {
     view: 'Grid view',
     pageSize: 100,
-    filterByFormula: `IS_AFTER(CREATED_TIME(), DATETIME_PARSE('${lastFetch}'))`
+    filterByFormula: `{owner} = '${worker}'`
   }
 
-  return new Promise((resolve, reject) => {
-    const newCustomers = []
+  const customers = await getCustomers(context, workerQuery)
+  const customersView = customers.map(customer => ({
+    display_name: customer.display_name,
+    customer_id: customer.customer_id,
+    avatar: customer.avatar
+  }))
 
-    base('Customers').select(querySettings).eachPage(function page (records, fetchNextPage) {
-      // This function (`page`) will get called for each page of records.
+  if (!pageSize) {
+    return customersView
+  }
 
-      records.forEach(function (record) {
-        const formattedRecord = toCustomerDto(record)
-        newCustomers.push(formattedRecord)
-      })
+  if (anchor) {
+    const lastIndex = customersView.findIndex((c) => String(c.customer_id) === String(anchor))
+    const nextIndex = lastIndex + 1
+    return customersView.slice(nextIndex, nextIndex + pageSize)
+  } else {
+    return customersView.slice(0, pageSize)
+  }
+}
 
-      fetchNextPage()
-    }, function done (err) {
-      if (err) { reject(err) }
-      resolve(newCustomers)
-    })
-  })
+const getRandomWorker = async (context) => {
+  const allCustomers = getCustomers(context)
+  const uniqueWorkers = []
+
+  for (const customer of allCustomers) {
+    if (!uniqueWorkers.includes(customer.worker)) {
+      uniqueWorkers.push(customer.worker)
+    }
+  }
+
+  const randomIndex = Math.floor(Math.random() * uniqueWorkers.length)
+  return uniqueWorkers[randomIndex]
 }
 
 const toCustomerDto = (customerRecord) => {
@@ -143,93 +135,6 @@ const toCustomerFields = (customerDto) => {
   }
 }
 
-const findWorkerForCustomer = async (context, customerNumber) => {
-  if (customers.length === 0) {
-    customers = await getAllAirtableCustomers(context)
-  }
-
-  const workerForCustomer = customers.filter(customer => {
-    if (customerNumber.includes(customer.address)) {
-      return customer
-    }
-
-    return null
-  })
-
-  if (workerForCustomer.length > 0) {
-    return workerForCustomer[0].worker
-  }
-
-  return null
-}
-
-const findRandomWorker = async (context) => {
-  if (customers.length === 0) {
-    customers = await getAllAirtableCustomers(context)
-  }
-
-  const uniqueWorkers = []
-
-  for (const customer of customers) {
-    if (!uniqueWorkers.includes(customer.worker)) {
-      uniqueWorkers.push(customer.worker)
-    }
-  }
-
-  const randomIndex = Math.floor(Math.random() * uniqueWorkers.length)
-  return uniqueWorkers[randomIndex]
-}
-
-const getCustomersList = async (context, worker, pageSize, anchor) => {
-  // Pull airtable customers on first load,
-  // otherwise use what's stored in memory
-  if (anchor === undefined || customers.length === 0) {
-    customers = await getAllAirtableCustomers(context, worker)
-    setLastFetch()
-  } else {
-    const newCustomers = await getNewCustomers(context, worker)
-    customers = customers.concat(newCustomers)
-    setLastFetch()
-  }
-
-  const workerCustomers = customers.filter(customer => customer.worker === worker)
-  const list = workerCustomers.map(customer => ({
-    display_name: customer.display_name,
-    customer_id: customer.customer_id,
-    avatar: customer.avatar
-  }))
-
-  if (!pageSize) {
-    return list
-  }
-
-  if (anchor) {
-    const lastIndex = list.findIndex((c) => String(c.customer_id) === String(anchor))
-    const nextIndex = lastIndex + 1
-    return list.slice(nextIndex, nextIndex + pageSize)
-  } else {
-    return list.slice(0, pageSize)
-  }
-}
-
-const getCustomerByNumber = async (context, customerNumber, returnRawRecord = false) => {
-  const customer = await getAirtableCustomerByParams(context, {
-    view: 'Grid view',
-    filterByFormula: `{sms} = '${customerNumber}'`,
-    maxRecords: 1
-  }, returnRawRecord)
-  return customer
-}
-
-const getCustomerById = async (context, customerId) => {
-  const customer = await getAirtableCustomerByParams(context, {
-    view: 'Grid view',
-    filterByFormula: `{id} = '${customerId}'`,
-    maxRecords: 1
-  })
-  return customer
-}
-
 const createCustomer = async (context, customerDto) => {
   const fields = toCustomerFields(customerDto)
   const base = initAirtable(context)
@@ -246,10 +151,23 @@ const createCustomer = async (context, customerDto) => {
   })
 }
 
-const updateCustomer = async (context, id, fields) => {
+const deleteCustomer = async (context, rawId) => {
   const base = initAirtable(context)
   return new Promise((resolve, reject) => {
-    base('Customers').update(id, fields, function done (err, record) {
+    base('Customers').destroy([rawId], function done (err, deletedRecords) {
+      if (err) {
+        console.error('deleteCustomer error: ' + JSON.stringify(err))
+        reject(err)
+      }
+      resolve(deletedRecords)
+    })
+  })
+}
+
+const updateCustomer = async (context, rawId, fields) => {
+  const base = initAirtable(context)
+  return new Promise((resolve, reject) => {
+    base('Customers').update(rawId, fields, function done (err, record) {
       if (err) {
         console.error('updateCustomer error: ' + JSON.stringify(err))
         reject(err)
@@ -261,10 +179,9 @@ const updateCustomer = async (context, id, fields) => {
 
 module.exports = {
   createCustomer,
-  findWorkerForCustomer,
-  findRandomWorker,
-  getCustomerById,
-  getCustomersList,
-  getCustomerByNumber,
+  deleteCustomer,
+  getCustomer,
+  getCustomersByWorker,
+  getRandomWorker,
   updateCustomer
 }

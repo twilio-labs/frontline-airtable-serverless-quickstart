@@ -1,5 +1,5 @@
 /* eslint-disable no-undef */
-const { getCustomerByNumber, updateCustomer } = require(Runtime.getAssets()['/providers/customers.js'].path)
+const { getCustomer, updateCustomer } = require(Runtime.getAssets()['/providers/customers.js'].path)
 const { getParticipant, getParticipants, isCustomerParticipant, isUserMessageEvent } = require(Runtime.getAssets()['/providers/conversation.js'].path)
 const { getOptOutChangeRequest, isOptedOut } = require(Runtime.getAssets()['/providers/optout.js'].path)
 
@@ -26,12 +26,16 @@ exports.handler = async function (context, event, callback) {
   }
 }
 
+const getCustomerBySms = async (context, smsNumber, returnRawRecord = false) => {
+  return await getCustomer(context, { key: 'sms', value: smsNumber }, returnRawRecord)
+}
+
 const onConversationAdd = async (context, event) => {
   const customerNumber = event['MessagingBinding.Address']
   const isIncomingConversation = !!customerNumber
   if (!isIncomingConversation) return null
 
-  const customerDetails = await getCustomerByNumber(context, customerNumber) || {}
+  const customerDetails = await getCustomerBySms(context, customerNumber) || {}
   const conversationProperties = {
     friendly_name: customerDetails.display_name || customerNumber,
     attributes: JSON.stringify({
@@ -42,14 +46,15 @@ const onConversationAdd = async (context, event) => {
   return conversationProperties
 }
 
-const onMessageAdd = async (context, event) => { // TODO
+const onMessageAdd = async (context, event) => {
   if (isUserMessageEvent(event)) {
     const participants = await getParticipants(context, event.ConversationSid)
     const customerParticipants = participants.filter(isCustomerParticipant)
+
     const customerRecords = await Promise.all(
       customerParticipants.map(async (customerParticipant) => {
         const address = customerParticipant.messagingBinding.address
-        return await getCustomerByNumber(context, address, true)
+        return await getCustomerBySms(context, address, true)
       })
     )
 
@@ -78,7 +83,7 @@ const onParticipantAdded = async (context, event) => {
 
   if (isCustomer) {
     const customerParticipant = await getParticipant(context, event.ConversationSid, event.ParticipantSid)
-    const customerDetails = await getCustomerByNumber(context, customerNumber) || {}
+    const customerDetails = await getCustomerBySms(context, customerNumber) || {}
     await setCustomerParticipantProperties(customerParticipant, customerDetails)
   }
 
@@ -110,6 +115,6 @@ const updateCustomerOptOutStatus = async (context, event, optOutStatus) => {
   // const twilioPhoneNumber = getPhoneNumber(customerParticipant.messagingBinding.proxy_address)
 
   // update customer opt out state
-  const customerRecord = await getCustomerByNumber(context, event.Author, true)
+  const customerRecord = await getCustomerBySms(context, event.Author, true)
   await updateCustomer(context, customerRecord.id, { opt_out: optOutStatus })
 }

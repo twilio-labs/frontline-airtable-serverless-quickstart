@@ -1,6 +1,10 @@
 // eslint-disable-next-line no-undef
 const customersPath = Runtime.getAssets()['/providers/customers.js'].path
-const { createCustomer, getCustomerById, getCustomersList } = require(customersPath)
+const { createCustomer, deleteCustomer, getCustomer, getCustomersByWorker } = require(customersPath)
+
+const getCustomerById = async (context, customerId, returnRawRecord) => {
+  return await getCustomer(context, { key: 'id', value: customerId }, returnRawRecord)
+}
 
 exports.handler = async function (context, event, callback) {
   console.log(`crm.handler event: ${JSON.stringify(event)}`)
@@ -13,6 +17,10 @@ exports.handler = async function (context, event, callback) {
     switch (location) {
       case 'CreateCustomer': {
         response = await handleCreateCustomer(context, event)
+        break
+      }
+      case 'DeleteCustomer': {
+        response = await handleDeleteCustomer(context, event)
         break
       }
       case 'GetCustomerDetailsByCustomerId': {
@@ -28,6 +36,7 @@ exports.handler = async function (context, event, callback) {
         throw new Error(`422 Unknown location: ${location}`)
       }
     }
+
     callback(null, response)
   } catch (err) {
     console.log(`crm.handler error: ${err}`)
@@ -59,11 +68,14 @@ const handleCreateCustomer = async (context, event) => {
   }
 }
 
+const handleDeleteCustomer = async (context, event) => {
+  const customerId = event.CustomerId
+  const customerRecord = await getCustomerById(context, customerId, true)
+  await deleteCustomer(context, customerRecord.id)
+}
+
 const handleGetCustomerDetailsByCustomerIdCallback = async (context, event) => {
   const customerId = event.CustomerId
-
-  // Fetch Customer Details based on his ID
-  // and information about a worker, that requested that information
   const customerDetails = await getCustomerById(context, customerId)
 
   // Respond with Contact object
@@ -89,7 +101,7 @@ const handleGetCustomersListCallback = async (context, event) => {
   const anchor = event.Anchor || 0
 
   // Fetch Customers list based on information about a worker, that requested it
-  const customersList = await getCustomersList(context, workerIdentity, pageSize, anchor)
+  const customersList = await getCustomersByWorker(context, workerIdentity, pageSize, anchor)
 
   // Respond with Customers object
   return {
@@ -97,22 +109,4 @@ const handleGetCustomersListCallback = async (context, event) => {
       customers: customersList
     }
   }
-}
-
-const parseChannelsFromEvent = (event) => {
-  const channels = []
-  const regex = /\[(.*?)\]/gm
-  for (const [key, value] of Object.entries(event)) {
-    if (!key.startsWith('Channels')) continue
-
-    const matches = [...key.matchAll(regex)]
-    const channelIndex = matches[0][1]
-    const channelPropName = matches[1][1]
-    if (channels[channelIndex] === undefined) {
-      channels[channelIndex] = {}
-    }
-    channels[channelIndex][channelPropName] = value
-  }
-
-  return channels
 }
