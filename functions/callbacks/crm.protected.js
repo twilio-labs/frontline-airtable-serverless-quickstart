@@ -72,6 +72,8 @@ const handleDeleteCustomer = async (context, event) => {
   const customerId = event.CustomerId
   const customerRecord = await getCustomerById(context, customerId, true)
   await deleteCustomer(context, customerRecord.id)
+
+  return {}
 }
 
 const handleGetCustomerDetailsByCustomerIdCallback = async (context, event) => {
