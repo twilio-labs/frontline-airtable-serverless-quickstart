@@ -73,7 +73,7 @@ const handleDeleteCustomer = async (context, event) => {
   const customerRecord = await getCustomerById(context, customerId, true)
   await deleteCustomer(context, customerRecord.id)
 
-  return {} // { customerId: customerId }
+  return {}
 }
 
 const handleGetCustomerDetailsByCustomerIdCallback = async (context, event) => {
