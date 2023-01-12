@@ -1,6 +1,6 @@
 // eslint-disable-next-line no-undef
 const customersPath = Runtime.getAssets()['/providers/customers.js'].path
-const { getCustomerById } = require(customersPath)
+const { getCustomer } = require(customersPath)
 
 // eslint-disable-next-line no-undef
 const templatesPath = Runtime.getAssets()['/providers/templates.js'].path
@@ -38,7 +38,7 @@ exports.handler = async function (context, event, callback) {
 }
 
 const handleGetTemplatesByCustomerIdCallback = async (context, event) => {
-  const customerDetails = await getCustomerById(context, event.CustomerId)
+  const customerDetails = getCustomer(context, { key: 'id', value: event.CustomerId })
 
   if (!customerDetails) {
     throw new Error('Customer not found')
