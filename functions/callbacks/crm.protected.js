@@ -45,6 +45,16 @@ exports.handler = async function (context, event, callback) {
 }
 
 const handleCreateCustomer = async (context, event) => {
+  if (event.DisplayName === 'failme') {
+    const errorBody = { friendly_error_message: 'Invalid DisplayName' }
+    const invalidRequestResponse = new Twilio.Response()
+    invalidRequestResponse
+      .setBody(JSON.stringify(errorBody))
+      .setStatusCode(400)
+
+    return invalidRequestResponse
+  }
+
   const customerRequest = {
     display_name: event.DisplayName,
     channels: JSON.parse(event.Channels),
