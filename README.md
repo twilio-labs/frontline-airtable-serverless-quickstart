@@ -1,5 +1,7 @@
 # Frontline Airtable Serverless Quickstart
 
+***NOTE: Effective February 9, 2023***, Twilio Frontline is limited to existing Frontline accounts only. New and existing Twilio customers without previous access to Frontline will not be able to get Frontline through Twilio's Console nor access developer documentation.   For more information, please check out the Twilio [Frontline](https://support.twilio.com/hc/en-us/articles/12427869273627-Twilio-Frontline-Limitation-of-New-Sales-Notice-and-Information) Support documentation.
+
 ![Twilio Frontline Integrations Service](https://user-images.githubusercontent.com/1418949/156482434-bda73f12-b1c1-4876-9177-0367751f6ff5.png)
 
 
